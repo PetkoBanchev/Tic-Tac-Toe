@@ -9,7 +9,7 @@ public class Square : MonoBehaviour
     private int x;
     private int y;
 
-    private SquareOwner squareOwner;
+    [SerializeField] private SquareOwner squareOwner = SquareOwner.EMPTY;
 
     private Text squareText;
 
