@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -12,6 +13,8 @@ public class Square : MonoBehaviour
     [SerializeField] private SquareOwner squareOwner = SquareOwner.EMPTY;
 
     private Text squareText;
+
+    public static event Action<Square> OnSquareSet;
 
     public int X
     {
@@ -50,6 +53,8 @@ public class Square : MonoBehaviour
     public void SetSquareOwner()
     {
         SquareOwner = GameManager.Instance.CurrentPlayer;
+        OnSquareSet?.Invoke(this);
+        //GameManager.Instance.CheckForWinner(x, y);  
         GameManager.Instance.ChangeCurrentPlayer();
     }
 }
