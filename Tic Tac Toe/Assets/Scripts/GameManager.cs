@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+[RequireComponent(typeof(IGenerator))]
 public class GameManager : MonoBehaviour
 {
     #region Private Variables
-    private FieldGenerator fieldGenerator;
+    private IGenerator fieldGenerator;
     private Square[,] field = new Square[3, 3];
     private SquareOwner currentPlayer = SquareOwner.PLAYER1;
     private bool isGameOver = false;

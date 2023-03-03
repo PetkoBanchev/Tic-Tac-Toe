@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class FieldGenerator : MonoBehaviour
+public class FieldGenerator : MonoBehaviour,IGenerator
 {
     #region Private Variables
     [SerializeField] private GameObject squarePrefab;
