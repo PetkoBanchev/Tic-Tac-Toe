@@ -34,14 +34,14 @@ public class FieldGenerator : MonoBehaviour
         {
             for (int x = 0; x < field.GetLength(0); x++)
             {
-                var square = Instantiate(squarePrefab, new Vector3(x * 200, y * 200, 0), Quaternion.identity, fieldHolder).GetComponent<Square>();
+                var square = Instantiate(squarePrefab, new Vector3(x * .33f, y * .33f, 0), Quaternion.identity, fieldHolder).GetComponent<Square>(); // * .33f ensure proper spacing between the squares
                 square.X = x;
                 square.Y = y;
                 field[x, y] = square;
             }
         }
 
-        fieldHolder.localPosition = new Vector3(60, 550, 0); // Ensures the field is centred
+        fieldHolder.localPosition = new Vector3(-345, 0, 0); // Ensures the field is centred
 
         return field;
     }

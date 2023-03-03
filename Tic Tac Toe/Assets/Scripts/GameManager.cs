@@ -43,7 +43,6 @@ public class GameManager : MonoBehaviour
         Square.OnSquareSet += ChangeCurrentPlayer;
 
         fieldGenerator = GetComponent<FieldGenerator>();
-        field = fieldGenerator.GenerateField();
     }
 
     /// <summary>
