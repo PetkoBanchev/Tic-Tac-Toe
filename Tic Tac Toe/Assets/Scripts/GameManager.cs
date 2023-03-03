@@ -1,26 +1,33 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour
 {
+    #region Private Variables
     private FieldGenerator fieldGenerator;
-
     private Square[,] field = new Square[3, 3];
     private SquareOwner currentPlayer = SquareOwner.PLAYER1;
     private bool isGameOver = false;
     private int filledSquaresCounter = 0;
+    #endregion
 
+    #region Events
     public event Action<SquareOwner> OnGameOver;
     public event Action OnNewGame;
-    public SquareOwner CurrentPlayer { get { return currentPlayer; } }
+    #endregion
 
+    #region Public Properties
+    public SquareOwner CurrentPlayer { get { return currentPlayer; } }
+    #endregion
+
+    #region Singleton
     private static GameManager instance;
     public static GameManager Instance { get { return instance; } }
+    #endregion
 
-
+    #region Private Methods
     private void Awake()
     {
         // Singleton pattern
@@ -39,6 +46,14 @@ public class GameManager : MonoBehaviour
         field = fieldGenerator.GenerateField();
     }
 
+    /// <summary>
+    /// Checks for a winner in several steps.
+    /// 1. Loops through all the neighbours and checks for a match.
+    /// 2. If a match is found it determines on which of the 4 axes it belongs.
+    /// 3. Checks along the axis in both directions for a match.
+    /// 4. If there are 3 matches on the same axis a winner is declared.
+    /// </summary>
+    /// <param name="currentSquare"></param>
     private void CheckForWinnerWithEvent(Square currentSquare)
     {
         List<Square>[] axes = new List<Square>[4];
@@ -163,17 +178,29 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Simple draw check. If the field is full and there is no winner a draw is declared.
+    /// SquareOwner.EMPTY is passed so the InputManager knows it is a draw.
+    /// </summary>
     private void CheckForDraw()
     {
         if (filledSquaresCounter == 9 && !isGameOver) // A draw is declared only when there is no winner after the final square has been filled.
             OnGameOver?.Invoke(SquareOwner.EMPTY);
     }
 
+    /// <summary>
+    /// Disables every button in the field.
+    /// </summary>
     private void DisableField()
     {
         foreach (Square s in field)
             s.transform.GetComponent<Button>().interactable = false; // Disables all the buttons after the game ends
     }
+
+    /// <summary>
+    /// Toggles the current player.
+    /// </summary>
+    /// <param name="_square"></param>
     private void ChangeCurrentPlayer(Square _square)
     {
         if (_square.SquareOwner == SquareOwner.PLAYER1)
@@ -181,7 +208,12 @@ public class GameManager : MonoBehaviour
         else
             currentPlayer = SquareOwner.PLAYER1;
     }
+    #endregion
 
+    #region Public Methods
+    /// <summary>
+    /// Resets the game parameters and gets a new field.
+    /// </summary>
     public void NewGame()
     {
         currentPlayer = SquareOwner.PLAYER1;
@@ -190,6 +222,7 @@ public class GameManager : MonoBehaviour
         OnNewGame?.Invoke();
         field = fieldGenerator.GenerateField();
     }
+    #endregion
 
     #region Helper classes
     private class Ends
