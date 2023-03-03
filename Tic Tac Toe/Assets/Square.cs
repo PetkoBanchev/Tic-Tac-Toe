@@ -47,14 +47,12 @@ public class Square : MonoBehaviour
         else
             squareText.text = "O";
 
-        transform.GetComponent<Button>().interactable = false;
+        transform.GetComponent<Button>().interactable = false; // Disables the button, so the input cannot be overwritten
     }
 
     public void SetSquareOwner()
     {
         SquareOwner = GameManager.Instance.CurrentPlayer;
         OnSquareSet?.Invoke(this);
-        //GameManager.Instance.CheckForWinner(x, y);  
-        GameManager.Instance.ChangeCurrentPlayer();
     }
 }

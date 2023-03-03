@@ -6,109 +6,63 @@ using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour
 {
+    private FieldGenerator fieldGenerator;
+
     private Square[,] field = new Square[3, 3];
-
-    [SerializeField] private GameObject squarePrefab;
-    [SerializeField] private Transform fieldHolder;
-
     private SquareOwner currentPlayer = SquareOwner.PLAYER1;
-    private bool isWinner = false;
+    private bool isGameOver = false;
+    private int filledSquaresCounter = 0;
 
-    public SquareOwner CurrentPlayer
-    {
-        get { return currentPlayer; }
-        set { currentPlayer = value; }
-    }
-
+    public event Action<SquareOwner> OnGameOver;
+    public event Action OnNewGame;
+    public SquareOwner CurrentPlayer { get { return currentPlayer; } }
 
     private static GameManager instance;
-
     public static GameManager Instance { get { return instance; } }
 
 
     private void Awake()
     {
+        // Singleton pattern
         if (instance != null && instance != this)
-        {
             Destroy(this.gameObject);
-        }
         else
-        {
             instance = this;
-        }
 
+        // N.B! The win check must happen before the change of the current player! If it's the other way around no win can be detected. 
+        // When an event has multiple subscribers, the event handlers are invoked synchronously when an event is raised.
+        // Check for more info: https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/events/
         Square.OnSquareSet += CheckForWinnerWithEvent;
+        Square.OnSquareSet += ChangeCurrentPlayer;
+
+        fieldGenerator = GetComponent<FieldGenerator>();
+        field = fieldGenerator.GenerateField();
     }
 
-    // Start is called before the first frame update
-    void Start()
-    {
-        GenerateField();
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-
-    private void GenerateField()
-    {
-        for(int y = 0; y < field.GetLength(1); y++)
-        {
-            for(int x = 0; x < field.GetLength(0); x++)
-            {
-                var square = Instantiate(squarePrefab, new Vector3(x*200, y*200, 0), Quaternion.identity).GetComponent<Square>();
-                square.X = x;
-                square.Y = y;
-                field[x, y] = square;
-                square.transform.SetParent(fieldHolder);
-            }
-        }
-
-        fieldHolder.localPosition = new Vector3(60, 550, 0);
-    }
-
-    public void CheckForWinnerWithEvent(Square currentSquare)
+    private void CheckForWinnerWithEvent(Square currentSquare)
     {
         List<Square>[] axes = new List<Square>[4];
         int x = currentSquare.X;
         int y = currentSquare.Y;
 
-        //List<Square> horizontal; (-1, 0) && (1, 0)  - 0
-        //List<Square> vertical;   (0, -1) && (0, 1)  - 1
-        //List<Square> ascending;  (-1, -1) && (1, 1) - 2
-        //List<Square> descending; (-1, 1) && (1, -1) - 3
+        // Description of the 4 possible axes
+        // List<Square> horizontal; (-1, 0) && (1, 0)  - 0
+        // List<Square> vertical;   (0, -1) && (0, 1)  - 1
+        // List<Square> ascending;  (-1, -1) && (1, 1) - 2
+        // List<Square> descending; (-1, 1) && (1, -1) - 3
 
         for (var i = -1; i < 2; i++) // (y axis)
         {
             for (var j = -1; j < 2; j++)  // (x axis)
             {
-                if ((i == 0 && j == 0) || (x + j) < 0 || (x + j) > field.GetLength(0) - 1 || (y + i) < 0 || (y + i) > field.GetLength(1) - 1) //excludes currentSquare and all indexes outside array bounds
-                {
+                // Excluding currentSquare and all indexes outside array bounds
+                if ((i == 0 && j == 0) || (x + j) < 0 || (x + j) > field.GetLength(0) - 1 || (y + i) < 0 || (y + i) > field.GetLength(1) - 1) 
                     continue;
-                }
 
-                if (isWinner)
+                // Check if a neighbour belongs to current player
+                if (field[x + j, y + i] != null && field[x + j, y + i].GetComponent<Square>().SquareOwner == currentPlayer) 
                 {
-                    foreach(Square s in field)
-                        s.transform.GetComponent<Button>().interactable = false;
-                    //endGamePanel.SetActive(true);
-                    //playerTurnText.text = " ";
-                    if (currentPlayer == SquareOwner.PLAYER1)
-                    {
-                        Debug.Log("Player 1 wins");
-                    }
-                    //endGamePanel.GetComponentInChildren<Text>().text = "Player 1 wins";
-                    else
-                        Debug.Log("Player 2 wins");
-                    //endGamePanel.GetComponentInChildren<Text>().text = "Player 2 wins";
-                    break;
-                }
-
-                if (field[x + j, y + i] != null && field[x + j, y + i].GetComponent<Square>().SquareOwner == currentPlayer) //check if neighbour belongs to current player
-                {
-                    switch ((j, i))
+                    switch ((j, i)) // Determing on which axis we found a matching neighbour
                     {
                         //Horizontal axis
                         case var valueNegativeDir when valueNegativeDir == (-1, 0):
@@ -150,6 +104,11 @@ public class GameManager : MonoBehaviour
             }
         }
 
+        // Draw check
+        filledSquaresCounter++;
+        CheckForDraw();
+
+        // Nested helper method to check if there are 3 matching squares along a given axis
         void CheckAlongAxis(int xDir, int yDir, Square _curSquare, List<Square> axis)
         {
             int xCur = _curSquare.X;
@@ -174,13 +133,15 @@ public class GameManager : MonoBehaviour
                 // Breaks the loop when a win is detected
                 if (axis.Count == 3)
                 {
-                    isWinner = true;
+                    isGameOver = true;
+                    DisableField();
+                    OnGameOver?.Invoke(currentPlayer);
                     foreach(Square s in axis)
                         s.transform.GetComponent<Image>().color = Color.green;
                     break;
                 }
 
-                // Helper method to keep the code more readable
+                // Nested helper method to check if there are 2 matching neighbours in a given direction
                 void CheckNeighborsInDirection(int _x, int _y, bool end, Directions dir)
                 {
                     if ((_x < field.GetLength(0) && _x > -1) && (_y < field.GetLength(1) && _y > -1))
@@ -198,13 +159,24 @@ public class GameManager : MonoBehaviour
                         }
                     }
                 }
-
             }
         }
     }
-    public void ChangeCurrentPlayer()
+
+    private void CheckForDraw()
     {
-        if (currentPlayer == SquareOwner.PLAYER1)
+        if (filledSquaresCounter == 9 && !isGameOver) // A draw is declared only when there is no winner after the final square has been filled.
+            OnGameOver?.Invoke(SquareOwner.EMPTY);
+    }
+
+    private void DisableField()
+    {
+        foreach (Square s in field)
+            s.transform.GetComponent<Button>().interactable = false; // Disables all the buttons after the game ends
+    }
+    private void ChangeCurrentPlayer(Square _square)
+    {
+        if (_square.SquareOwner == SquareOwner.PLAYER1)
             currentPlayer = SquareOwner.PLAYER2;
         else
             currentPlayer = SquareOwner.PLAYER1;
@@ -212,15 +184,14 @@ public class GameManager : MonoBehaviour
 
     public void NewGame()
     {
-        Array.Clear(field, 0, field.Length);
-        foreach (Transform child in fieldHolder.transform)
-            Destroy(child.gameObject);
         currentPlayer = SquareOwner.PLAYER1;
-        fieldHolder.localPosition = Vector3.zero;
-        isWinner = false;
-        GenerateField();
+        isGameOver = false;
+        filledSquaresCounter = 0;
+        OnNewGame?.Invoke();
+        field = fieldGenerator.GenerateField();
     }
 
+    #region Helper classes
     private class Ends
     {
         public bool PositiveEnd;
@@ -234,4 +205,5 @@ public class GameManager : MonoBehaviour
         POSITIVE,
         NEGATIVE
     }
+    #endregion
 }
